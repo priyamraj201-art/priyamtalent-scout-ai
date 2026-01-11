@@ -10,8 +10,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScanHistory } from '@/components/dashboard/ScanHistory';
 import { AnalysisResults } from '@/components/dashboard/AnalysisResults';
+import { ResumeUpload } from '@/components/dashboard/ResumeUpload';
 import { generateMockAnalysis, type AnalysisResult } from '@/lib/mockAnalysis';
-import { FileText, Briefcase, Sparkles, Loader2 } from 'lucide-react';
+import { Briefcase, Sparkles, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -52,13 +53,13 @@ export default function Dashboard() {
     mutationFn: async (params: { resumeText: string; jdText: string; result: AnalysisResult }) => {
       const { data, error } = await supabase
         .from('scans')
-        .insert({
+        .insert([{
           user_id: user!.id,
           resume_text: params.resumeText,
           jd_text: params.jdText,
           match_score: params.result.matchScore,
-          analysis_json: params.result as unknown as Record<string, unknown>,
-        })
+          analysis_json: JSON.parse(JSON.stringify(params.result)),
+        }])
         .select()
         .single();
       
@@ -80,7 +81,7 @@ export default function Dashboard() {
 
   const handleAnalyze = async () => {
     if (!resumeText.trim()) {
-      toast.error('Please paste your resume');
+      toast.error('Please paste your resume or upload a file');
       return;
     }
     if (!jdText.trim()) {
@@ -163,22 +164,10 @@ export default function Dashboard() {
             <main className="space-y-6">
               {/* Input Section */}
               <div className="grid md:grid-cols-2 gap-6">
-                <Card className="glass-card">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="flex items-center gap-2 text-base">
-                      <FileText className="h-4 w-4 text-primary" />
-                      Your Resume
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <Textarea
-                      placeholder="Paste your resume text here..."
-                      value={resumeText}
-                      onChange={(e) => setResumeText(e.target.value)}
-                      className="min-h-[300px] resize-none bg-secondary/50 border-border focus:border-primary"
-                    />
-                  </CardContent>
-                </Card>
+                <ResumeUpload 
+                  resumeText={resumeText} 
+                  onResumeTextChange={setResumeText} 
+                />
 
                 <Card className="glass-card">
                   <CardHeader className="pb-3">
@@ -206,7 +195,7 @@ export default function Dashboard() {
                       placeholder="Or paste job description text here..."
                       value={jdText}
                       onChange={(e) => setJdText(e.target.value)}
-                      className="min-h-[250px] resize-none bg-secondary/50 border-border focus:border-primary"
+                      className="min-h-[300px] resize-none bg-secondary/50 border-border focus:border-primary"
                     />
                   </CardContent>
                 </Card>
@@ -248,10 +237,7 @@ export default function Dashboard() {
 
               {/* Results */}
               {analysisResult && !isAnalyzing && (
-                <AnalysisResults
-                  result={analysisResult}
-                  onApply={(company) => toast.success(`Applied to ${company}!`)}
-                />
+                <AnalysisResults result={analysisResult} />
               )}
             </main>
           </div>
