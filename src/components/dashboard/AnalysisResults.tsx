@@ -3,7 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScoreRing } from './ScoreRing';
-import { CheckCircle2, XCircle, Lightbulb, Building2, ArrowRight } from 'lucide-react';
+import { CheckCircle2, XCircle, Lightbulb, Building2, Linkedin } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface AnalysisResult {
   matchScore: number;
@@ -17,6 +18,13 @@ interface AnalysisResultsProps {
   result: AnalysisResult;
   onApply?: (company: string) => void;
 }
+
+const openLinkedInJobSearch = (companyName: string) => {
+  const searchQuery = encodeURIComponent(`${companyName} jobs`);
+  const linkedInUrl = `https://www.linkedin.com/jobs/search/?keywords=${searchQuery}`;
+  window.open(linkedInUrl, '_blank', 'noopener,noreferrer');
+  toast.success(`Opening LinkedIn jobs for ${companyName}`);
+};
 
 export function AnalysisResults({ result, onApply }: AnalysisResultsProps) {
   const container = {
@@ -143,10 +151,10 @@ export function AnalysisResults({ result, onApply }: AnalysisResultsProps) {
                     size="sm"
                     variant="ghost"
                     className="w-full mt-2 hover:text-primary"
-                    onClick={() => onApply?.(company.name)}
+                    onClick={() => openLinkedInJobSearch(company.name)}
                   >
-                    Apply Now
-                    <ArrowRight className="h-4 w-4 ml-2" />
+                    <Linkedin className="h-4 w-4" />
+                    Apply on LinkedIn
                   </Button>
                 </div>
               ))}
