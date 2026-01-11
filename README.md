@@ -1,7 +1,7 @@
 
 ## Project info
 
-**URL**: (https://priyamrajtalent-scout-ai.lovable.app)
+**URL**: ((https://priyamrajtalent-scout-ai.lovable.app/dashboard))
 
 ## How can I edit this code?
 
