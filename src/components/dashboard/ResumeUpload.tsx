@@ -5,22 +5,63 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { FileText, Upload, Loader2, X, FileIcon } from 'lucide-react';
 import { toast } from 'sonner';
-import * as pdfjsLib from 'pdfjs-dist';
 import mammoth from 'mammoth';
-
-// Configure PDF.js worker
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
 
 interface ResumeUploadProps {
   resumeText: string;
   onResumeTextChange: (text: string) => void;
 }
 
+// Type for PDF.js library loaded from CDN
+interface PDFPageTextContent {
+  items: Array<{ str: string }>;
+}
+
+interface PDFPage {
+  getTextContent: () => Promise<PDFPageTextContent>;
+}
+
+interface PDFDocument {
+  numPages: number;
+  getPage: (num: number) => Promise<PDFPage>;
+}
+
+interface PDFLoadingTask {
+  promise: Promise<PDFDocument>;
+}
+
+interface PDFJSLib {
+  getDocument: (params: { data: ArrayBuffer }) => PDFLoadingTask;
+  GlobalWorkerOptions: { workerSrc: string };
+  version: string;
+}
+
+// Load PDF.js dynamically to avoid top-level await issues
+const loadPdfJs = async (): Promise<PDFJSLib> => {
+  if ((window as unknown as Record<string, PDFJSLib>).pdfjsLib) {
+    return (window as unknown as Record<string, PDFJSLib>).pdfjsLib;
+  }
+
+  return new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+    script.onload = () => {
+      const pdfjsLib = (window as unknown as Record<string, PDFJSLib>).pdfjsLib;
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 
+        'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      resolve(pdfjsLib);
+    };
+    script.onerror = reject;
+    document.head.appendChild(script);
+  });
+};
+
 export function ResumeUpload({ resumeText, onResumeTextChange }: ResumeUploadProps) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
 
   const extractTextFromPDF = async (file: File): Promise<string> => {
+    const pdfjsLib = await loadPdfJs();
     const arrayBuffer = await file.arrayBuffer();
     const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
     let fullText = '';
@@ -28,9 +69,7 @@ export function ResumeUpload({ resumeText, onResumeTextChange }: ResumeUploadPro
     for (let i = 1; i <= pdf.numPages; i++) {
       const page = await pdf.getPage(i);
       const textContent = await page.getTextContent();
-      const pageText = textContent.items
-        .map((item: unknown) => (item as { str: string }).str)
-        .join(' ');
+      const pageText = textContent.items.map((item) => item.str).join(' ');
       fullText += pageText + '\n\n';
     }
 
